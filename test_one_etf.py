@@ -71,7 +71,7 @@ with open(results, 'a+') as fd:
 inception = pd.read_csv('../etf_data/etf_inc_date.csv', sep=';')
 
 count = 1
-for etf in etfs[:10]:
+for etf in etfs:
     try:
         print(str(count) + '/' + str(len(etfs)))
         count += 1
