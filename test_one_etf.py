@@ -8,7 +8,7 @@ import pandas as pd
 sys.path.insert(0, '../etf_data')
 from etf_data_loader import load_data
 
-with open('../rebalancer/etfs.txt', 'r') as fd:
+with open('../etf_data/etfs.txt', 'r') as fd:
     etfs = list(fd.read().splitlines())
 
 etfs = list(set(etfs))
@@ -40,34 +40,16 @@ def compute_one_etf(etf, inception, results):
 
     df_open, df_close, df_high, df_low, df_adj_close = load_data([etf], start_date, end_date)
     dca = bah.DCA(30, 300.)
-    investor = bah.Investor([1.0], dca)
+    investor = bah.Investor(etf, [1.0], dca)
     sim = bah.BuyAndHoldInvestmentStrategy(investor, 2.)
-    sim.invest(df_adj_close, df_high, df_low)
-    means = []
-    rms_list = []
-    for i in range(1, 11):
-        rms = rolling_mean(np.array(sim.investor.ror_history), i * 365)
-        m = mean(rms)
-        if m > 0:
-            rms_list.append(m.round(2))
-            means.append(m.round(2))
-        else:
-            rms_list.append(0.)
-
-    means = np.array(means)
-    m = np.mean(means).round(2)
-    if np.isnan(m):
-        m = 0.
-    std = np.std(means).round(2)
-    if np.isnan(std):
-        std = 0.
-
-    result += ';' + str(sim.investor.invested_history[-1])
-    result += ';' + str(sim.investor.history[-1])
-    result += ';' + str(sim.investor.ror_history[-1])
-    result += ';' + str(m)
-    result += ';' + str(std)
-    for rms in rms_list:
+    sim.invest(df_adj_close)
+    investor.compute_means()
+    result += ';' + str(investor.invested_history[-1])
+    result += ';' + str(investor.history[-1])
+    result += ';' + str(investor.ror_history[-1])
+    result += ';' + str(investor.m)
+    result += ';' + str(investor.std)
+    for rms in investor.means:
         result += ';' + str(rms)
     result += '\n'
 
@@ -89,7 +71,7 @@ with open(results, 'a+') as fd:
 inception = pd.read_csv('../etf_data/etf_inc_date.csv', sep=';')
 
 count = 1
-for etf in etfs:
+for etf in etfs[:10]:
     try:
         print(str(count) + '/' + str(len(etfs)))
         count += 1

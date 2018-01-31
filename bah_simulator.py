@@ -1,11 +1,33 @@
 import numpy as np
+import pandas as pd
+from scipy.stats import rankdata
 
 
-def load_high_low(df_high, df_low):
-    if df_high is not None and df_low is not None:
-        df_high_low = np.abs(df_high - df_low)
+def rolling_mean(data, period):
+    rm = pd.rolling_mean(data, period)
+    rm = rm[~np.isnan(rm)]
+    return rm
 
-    return df_high_low
+
+def mean(value):
+    value = np.mean(value)
+    if np.isnan(value):
+        return 0.
+    return value
+
+
+def compute_rank(investors):
+    df = pd.DataFrame(colums=['ticket', 'mean', 'std', 'rank'])
+    for investor in investors:
+        df.append({'ticket': investor.ticket, 'mean': investor.mean, 'std': investor.std})
+
+    rank1 = rankdata(df['mean'], method='max')
+    rank2 = 100. * df['std']
+    rank = rank1 - rank2
+    df['rank'] = rank
+
+    for investor in investors:
+        investor.rank = df.loc[investor.ticket, 'rank']
 
 
 class DCA:
@@ -15,7 +37,8 @@ class DCA:
 
 
 class Investor:
-    def __init__(self, dist, dca):
+    def __init__(self, ticket, dist, dca):
+        self.ticket = ticket
         self.cash = 0.
         self.invested = 0.
         self.history = []
@@ -24,6 +47,29 @@ class Investor:
         self.shares = []
         self.dist = dist
         self.dca = dca
+        self.rms_list = []
+        self.means = []
+        self.rank = 0.
+        self.m = 0.
+        self.std = 0.
+
+    def compute_means(self):
+        for i in range(1, 11):
+            rms = rolling_mean(np.array(self.ror_history), i * 365)
+            m = mean(rms)
+            if m > 0:
+                self.rms_list.append(rms)
+                self.means.append(m.round(2))
+            else:
+                self.rms_list.append([0.])
+
+        self.means = np.array(self.means)
+        self.m = np.mean(self.means).round(2)
+        if np.isnan(self.m):
+            self.m = 0.
+        self.std = np.std(self.means).round(2)
+        if np.isnan(self.std):
+            self.std = 0.
 
 
 class BuyAndHoldInvestmentStrategy:
@@ -31,21 +77,17 @@ class BuyAndHoldInvestmentStrategy:
         self.investor = investor
         self.tr_cost = tr_cost
 
-    def invest(self, df_open, df_high, df_low):
-        df_high_low = load_high_low(df_high, df_low)
+    def invest(self, data):
 
-        if len(df_open.keys()) == 0:
+        if len(data.keys()) == 0:
             return
 
-        self.investor.shares = np.zeros(len(df_open.keys()))
+        self.investor.shares = np.zeros(len(data.keys()))
 
         day = 0
 
-        for i in df_open.index:
-
-            prices = df_open.loc[i]
-            high_low = df_high_low.loc[i]
-            high_low = np.array(high_low)
+        for i in data.index:
+            prices = data.loc[i]
 
             portfolio = self.investor.cash + np.dot(prices, self.investor.shares)
 
@@ -55,17 +97,14 @@ class BuyAndHoldInvestmentStrategy:
             if self.investor.invested == 0:
                 ror = 0
             else:
-                ror = (portfolio-self.investor.invested)/self.investor.invested
+                ror = (portfolio - self.investor.invested) / self.investor.invested
             self.investor.ror_history.append(ror)
 
             if day % self.investor.dca.period == 0:
-
                 self.investor.cash += self.investor.dca.cash
                 self.investor.invested += self.investor.dca.cash
 
                 portfolio = self.investor.cash + np.dot(prices, self.investor.shares)
-
-                prices = compute_prices(high_low, prices)
 
                 c = np.multiply(self.investor.dist, portfolio)
                 c = np.subtract(c, self.tr_cost)
@@ -75,13 +114,3 @@ class BuyAndHoldInvestmentStrategy:
                 self.investor.cash = portfolio - np.dot(self.investor.shares, prices) - len(s) * self.tr_cost
 
             day += 1
-
-
-def compute_prices(high_low, prices):
-    high_low = np.array(high_low)
-    high_low[high_low <= 0.] = 0.001
-    high_low[np.isnan(high_low)] = 0.001
-    noise = np.random.normal(0, high_low)
-    prices = np.add(prices, noise)
-
-    return prices
