@@ -6,12 +6,30 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, '../etf_data')
-from etf_data_loader import load_data
+from etf_data_loader import load_all_data_from_file
 
-with open('../etf_data/etfs.txt', 'r') as fd:
-    etfs = list(fd.read().splitlines())
+import concurrent.futures
+import time
 
-etfs = list(set(etfs))
+current_millis = lambda: int(round(time.time() * 1000))
+
+print('starting to load data')
+prefix = 'us_lse_'
+start_date = '1993-01-01'
+end_date = '2017-12-31'
+df_adj_close = load_all_data_from_file(prefix+'etf_data_adj_close.csv', start_date, end_date)
+
+if prefix == '':
+    inception = pd.read_csv('../etf_data/etf_inc_date.csv', sep=';')
+else:
+    inception = None
+
+with open('../etf_data/'+prefix+'etfs.txt', 'r') as fd:
+    etf_list = list(fd.read().splitlines())
+
+etf_list = list(set(etf_list))
+
+print('data loaded')
 
 
 def rolling_mean(data, period):
@@ -28,21 +46,19 @@ def mean(value):
 
 
 def compute_one_etf(etf, inception, results):
-    result = etf
+    print(etf)
+    result = etf[0]
 
-    start_date = '1993-01-01'
-    end_date = '2017-12-31'
+    if inception is not None:
+        inception_date = inception[inception.ticket == etf[0]].inc_date.values[0]
+        data = df_adj_close[df_adj_close.Date > inception_date][etf]
+    else:
+        data = df_adj_close[etf]
 
-    if etf in inception.ticket.values:
-        inception_date = inception[inception.ticket == etf].inc_date.values[0]
-        if inception_date > start_date:
-            start_date = inception_date
-
-    df_open, df_close, df_high, df_low, df_adj_close = load_data([etf], start_date, end_date)
     dca = bah.DCA(30, 300.)
     investor = bah.Investor(etf, [1.0], dca)
     sim = bah.BuyAndHoldInvestmentStrategy(investor, 2.)
-    sim.invest(df_adj_close)
+    sim.invest(data)
     investor.compute_means()
     result += ';' + str(investor.invested_history[-1])
     result += ';' + str(investor.history[-1])
@@ -52,12 +68,13 @@ def compute_one_etf(etf, inception, results):
     for rms in investor.means:
         result += ';' + str(rms)
     result += '\n'
+    print(result)
 
     with open(results, 'a+') as fd:
         fd.write(result)
 
 
-results = 'results/result.csv'
+results = 'results/'+prefix+'result.csv'
 if os.path.isfile(results):
     os.remove(results)
 
@@ -68,13 +85,16 @@ with open(results, 'a+') as fd:
 
     fd.write(headers + '\n')
 
-inception = pd.read_csv('../etf_data/etf_inc_date.csv', sep=';')
+cur = current_millis()
 
-count = 1
-for etf in etfs:
-    try:
-        print(str(count) + '/' + str(len(etfs)))
-        count += 1
-        compute_one_etf(etf, inception, results)
-    except:
-        print(etf + ' not processed')
+
+with concurrent.futures.ThreadPoolExecutor() as executor:
+    for etf in etf_list:
+        try:
+            executor.submit(compute_one_etf,[etf], inception, results)
+        except:
+            print(etf + ' not processed')
+    executor.shutdown(True)
+
+
+print('time:'+str((current_millis()-cur)/1000.)+' s')

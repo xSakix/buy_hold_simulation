@@ -16,20 +16,6 @@ def mean(value):
     return value
 
 
-def compute_rank(investors):
-    df = pd.DataFrame(colums=['ticket', 'mean', 'std', 'rank'])
-    for investor in investors:
-        df.append({'ticket': investor.ticket, 'mean': investor.mean, 'std': investor.std})
-
-    rank1 = rankdata(df['mean'], method='max')
-    rank2 = 100. * df['std']
-    rank = rank1 - rank2
-    df['rank'] = rank
-
-    for investor in investors:
-        investor.rank = df.loc[investor.ticket, 'rank']
-
-
 class DCA:
     def __init__(self, period=30, cash=300.):
         self.period = period
@@ -71,6 +57,9 @@ class Investor:
         if np.isnan(self.std):
             self.std = 0.
 
+    def compute_rank(self):
+        self.rank = (self.m + (1. - self.std)) / 2.
+
 
 class BuyAndHoldInvestmentStrategy:
     def __init__(self, investor, tr_cost):
@@ -78,7 +67,6 @@ class BuyAndHoldInvestmentStrategy:
         self.tr_cost = tr_cost
 
     def invest(self, data):
-
         if len(data.keys()) == 0:
             return
 
@@ -87,9 +75,12 @@ class BuyAndHoldInvestmentStrategy:
         day = 0
 
         for i in data.index:
-            prices = data.loc[i]
-
+            prices = data.loc[i].values
+            if prices == 0.:
+                continue
             portfolio = self.investor.cash + np.dot(prices, self.investor.shares)
+            if np.isnan(portfolio):
+                portfolio = 0.
 
             self.investor.history.append(portfolio)
             self.investor.invested_history.append(self.investor.invested)
@@ -105,7 +96,6 @@ class BuyAndHoldInvestmentStrategy:
                 self.investor.invested += self.investor.dca.cash
 
                 portfolio = self.investor.cash + np.dot(prices, self.investor.shares)
-
                 c = np.multiply(self.investor.dist, portfolio)
                 c = np.subtract(c, self.tr_cost)
                 s = np.divide(c, prices)
