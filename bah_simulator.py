@@ -23,7 +23,7 @@ class DCA:
 
 
 class Investor:
-    def __init__(self, ticket, dist, dca):
+    def __init__(self, ticket, dist, dca=DCA()):
         self.ticket = ticket
         self.cash = 0.
         self.invested = 0.

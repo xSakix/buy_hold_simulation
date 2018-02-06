@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import rankdata
 
-prefix = 'us_lse_'
+prefix = 'xetra_'
 
 data = pd.read_csv('results/'+prefix+'result.csv',sep=';')
 rank1 = rankdata(data['mean'],method='max')
