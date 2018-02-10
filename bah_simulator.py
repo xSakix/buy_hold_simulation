@@ -53,7 +53,7 @@ class Investor:
         self.m = np.mean(self.means).round(2)
         if np.isnan(self.m):
             self.m = 0.
-        self.std = np.std(self.means).round(2)
+        self.std = np.std(self.means).round(4)
         if np.isnan(self.std):
             self.std = 0.
 
