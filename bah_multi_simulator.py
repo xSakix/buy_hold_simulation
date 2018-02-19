@@ -85,7 +85,7 @@ class BuyAndHoldInvestmentStrategy:
                 etf_index = last_index % len(etf)
 
             if etf_index > -1:
-                price = data[etf[etf_index]].iloc[i]
+                price = data[etf[etf_index]].loc[i]
 
             if (etf_index > -1 and price == 0.) or (prices == 0).all():
                 day += 1
@@ -95,7 +95,6 @@ class BuyAndHoldInvestmentStrategy:
             if np.isnan(portfolio):
                 portfolio = 0.
 
-            print('%d:%f'%(day,portfolio))
             self.investor.history.append(portfolio)
             self.investor.invested_history.append(self.investor.invested)
 
@@ -111,7 +110,6 @@ class BuyAndHoldInvestmentStrategy:
                 self.investor.invested += self.investor.dca.cash
 
                 s = np.floor((self.investor.cash - self.tr_cost) / price)
-                print('%s:%d:%f'%(etf[etf_index],s,price))
                 self.investor.shares[etf_index] += s
                 self.investor.cash -= s*price - self.tr_cost
 
