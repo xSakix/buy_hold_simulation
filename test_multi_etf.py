@@ -10,7 +10,7 @@ import timeit
 sys.path.insert(0, '../etf_data')
 from etf_data_loader import load_all_data_from_file
 
-etfs = ['EWW', 'EWA', 'MDY', 'EWY', 'PNQI','XLE','SPY']
+etfs = ['EWA','XLE','EEM','XLK']
 start_date = '1993-01-01'
 end_date = '2017-12-31'
 
@@ -94,12 +94,16 @@ investors = []
 for etf in etfs:
     investors.append(compute_one_etf([etf]))
 
+investors.append(compute_one_etf(etfs))
+
 plt.plot(bah_investor.invested_history, 'C1')
 plt.plot(bah_investor.history, color='black')
 legend = ['invested multi', 'value multi']
 
 for etf in etfs:
     legend.append(etf)
+
+legend.append(str(etfs))
 
 for investor in investors:
     plt.plot(investor.history)
@@ -116,6 +120,8 @@ legend = [ 'ror multi']
 
 for etf in etfs:
     legend.append(etf)
+legend.append(str(etfs))
+
 
 plt.legend(legend)
 

@@ -48,9 +48,9 @@ def compute_one_etf(etf):
     for rms in investor.means:
         print(str(rms))
 
-    ax[0].plot(np.log(df_adj_close[etf]))
-    ax[0].plot(np.log(sim.investor.invested_history))
-    ax[0].plot(np.log(sim.investor.history))
+    #ax[0].plot(np.log(df_adj_close[etf]))
+    ax[0].plot(sim.investor.invested_history)
+    ax[0].plot(sim.investor.history)
     # ax[0].plot(sim.investor.history)
     ax[1].plot(sim.investor.ror_history)
     ax[0].legend(['nav', 'invested', 'value'])
@@ -71,9 +71,10 @@ def compute_dates(etf):
     return start_date,end_date
 
 
-compute_one_etf(['SPYG'])
-etf = ['SPY']
+compute_one_etf(['XLK'])
+etf = ['XLK']
 start_date, end_date = compute_dates(etf)
+print(start_date)
 
 # def call_load_data():
 #     load_data(etf, start_date, end_date)

@@ -76,7 +76,7 @@ class BuyAndHoldInvestmentStrategy:
 
         for i in data.index:
             prices = data.loc[i].values
-            if prices == 0.:
+            if (prices == 0.).any():
                 continue
             portfolio = self.investor.cash + np.dot(prices, self.investor.shares)
             if np.isnan(portfolio):

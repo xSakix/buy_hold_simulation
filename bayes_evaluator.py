@@ -55,15 +55,8 @@ print('ror:' + str(investor.ror_history[-1]))
 print('mean:' + str(investor.m))
 print('std:' + str(investor.std))
 
-plt.plot(df_adj_close[etf], investor.ror_history, 'C0o')
-plt.show()
-
 data = df_adj_close[etf].values
 ror = np.array(investor.ror_history)
-mean = data.mean()
-std = data.std()
-print('mean of prices: ' + str(mean))
-print('std of prices: ' + str(std))
 
 data_list = []
 for d in data:
@@ -73,65 +66,62 @@ for d in data:
         data_list.append(d)
 
 data = np.array(data_list)
-# data = data - np.mean(data)
 
-sns.kdeplot(data)
-plt.show()
+mean_data = data.mean()
+std_data = data.std()
 
-sns.kdeplot(ror)
-plt.show()
+data_s = (data - mean_data) / std_data
+data_s2 = data_s ** 2
+data_s3 = data_s ** 3
+data_s4 = data_s ** 4
 
-df = pd.DataFrame({'data':data,'ror':ror})
-print(df.corr().round(2))
+print('mean of prices: ' + str(mean_data))
+print('std of prices: ' + str(std_data))
 
-with pm.Model() as model:
-    alpha = pm.Normal(name='alpha', mu=mean, sd=std)
-    beta = pm.Normal(name='beta', mu=0, sd=100)
-    sigma = pm.Uniform(name='sigma', lower=0., upper=std)
-    mu = pm.Deterministic('mu', alpha + beta * data)
-    ret = pm.Normal(name='returns', mu=mu, sd=sigma, observed=ror)
-    trace_model = pm.sample(1000, tune=1000)
-
-pm.traceplot(trace_model)
-plt.show()
-
-data_seq = np.arange(min(data), max(data))
-mu_pred = np.zeros((len(data_seq), len(trace_model) * trace_model.nchains))
-for i, data_point in enumerate(data_seq):
-    mu_pred[i] = trace_model['alpha'] + trace_model['beta'] * data_point
-
-plt.plot(data_seq, mu_pred, 'C0.', alpha=0.1)
-plt.xlabel('etf price data')
+plt.plot(data_s, investor.ror_history, 'C0o')
+plt.title('nav to returns')
+plt.xlabel('nav')
 plt.ylabel('returns')
 plt.show()
 
-mu_mean = mu_pred.mean(1)
-mu_hpd = pm.hpd(mu_pred.T, alpha=0.11)
-print('mean mu: ' + str(mu_mean))
-print('mu hpd 89%: ' + str(mu_hpd))
-
-_, (ax0, ax1) = plt.subplots(1, 2)
-ax0.plot(data_seq, mu_pred, 'C0.', alpha=0.1)
-ax1.scatter(data, ror)
-ax1.plot(data_seq, mu_mean, 'C2')
-ax1.fill_between(data_seq, mu_hpd[:, 0], mu_hpd[:, 1], color='C2', alpha=0.25)
+sns.kdeplot(data)
+plt.title('distribution of nav')
 plt.show()
 
-# simulating returns from model
-returns_pred = pm.sample_ppc(trace_model, 10000, model)
-print(returns_pred)
+sns.kdeplot(ror)
+plt.title('distribution of returns')
+plt.show()
 
-# sumary for 89%
-returns_pred_hpd = pm.hpd(returns_pred['returns'], alpha=0.11)
-print(returns_pred_hpd)
+df = pd.DataFrame({'data_s': data_s, 'ror': ror})
+print(df.corr().round(2))
 
-#before plot sort is required
-idx = np.argsort(data)
-d_weight_ord = data[idx]
-returns_pred_hpd = returns_pred_hpd[idx]
+with pm.Model() as model:
+    alpha = pm.Normal(name='alpha', mu=np.mean(ror), sd=np.std(ror))
+    beta = pm.Normal(name='beta', mu=0, sd=10, shape=4)
+    sigma = pm.Uniform(name='sigma', lower=min(ror), upper=max(ror))
+    mu = pm.Deterministic('mu', alpha + beta[0] * data_s + beta[1] * data_s2+beta[2] * data_s3+beta[3] * data_s4)
+    ret = pm.Normal(name='returns', mu=mu, sd=sigma, observed=ror)
+    trace_model = pm.sample(1000, tune=2000)
 
-plt.scatter(data, ror)
-plt.fill_between(data_seq, mu_hpd[:, 0], mu_hpd[:, 1], color='C2', alpha=0.25)
-plt.fill_between(d_weight_ord, returns_pred_hpd[:, 0], returns_pred_hpd[:, 1], color='C2', alpha=0.25)
-plt.plot(data_seq, mu_mean,color='black')
+print(pm.summary(trace_model, ['alpha', 'beta', 'sigma']))
+
+pm.traceplot(trace_model, varnames=['alpha', 'beta', 'sigma'])
+plt.title('model parameters')
+plt.show()
+
+
+mu_pred = trace_model['mu']
+idx = np.argsort(data_s)
+mu_hpd = pm.hpd(mu_pred, alpha=0.11)[idx]
+ret_pred = pm.sample_ppc(trace_model, 200, model)
+ret_pred_hpd = pm.hpd(ret_pred['returns'], alpha=0.11)[idx]
+
+plt.plot(ror)
+plt.plot(ret_pred_hpd)
+plt.show()
+
+
+plt.scatter(data_s, ror, c='C0', alpha=0.3)
+plt.fill_between(data_s[idx], mu_hpd[:, 0], mu_hpd[:, 1], color='C2', alpha=0.25)
+plt.fill_between(data_s[idx], ret_pred_hpd[:, 0], ret_pred_hpd[:, 1], color='C2', alpha=0.25)
 plt.show()
