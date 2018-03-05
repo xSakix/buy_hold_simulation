@@ -9,3 +9,10 @@ def load_ranked(prefix=''):
 
     data = pd.read_csv(file)
     return data.sort_values(by=['rank'], ascending=False)
+
+
+def test():
+    ranked = load_ranked()
+    ranked.to_csv('results/pyranked.csv')
+
+test()
