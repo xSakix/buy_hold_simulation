@@ -11,58 +11,81 @@ from etf_data_loader import load_all_data_from_file
 
 import pymc3 as pm
 import seaborn as sns
+import random
+from datetime import datetime
+
+
+def gen_random_date(year_low, year_high):
+    y = random.randint(year_low, year_high)
+    m = random.randint(1, 12)
+    d = random.randint(1, 28)
+    return datetime(year=y, month=m, day=d)
+
+
+def get_data_random_dates(df_adj_close):
+    rand_start = gen_random_date(2010, 2017)
+    rand_end = gen_random_date(2010, 2017)
+    if rand_start > rand_end:
+        tmp = rand_start
+        rand_start = rand_end
+        rand_end = tmp
+
+    print(rand_start)
+    print(rand_end)
+    data = df_adj_close[df_adj_close['Date'] > str(rand_start)]
+    data = data[data['Date'] < str(rand_end)]
+
+    return data
+
+
+def compute_one_etf(etf, data):
+    dca = bah.DCA(30, 300.)
+    investor = bah.Investor(etf, np.full(len(etf), 1.0 / len(etf)), dca)
+    sim = bah.BuyAndHoldInvestmentStrategy(investor, 2.)
+    sim.invest(data)
+    # _, ax = plt.subplots(3, 1)
+    #
+    # ax[0].plot(data)
+    # ax[1].plot(sim.investor.invested_history)
+    # ax[1].plot(sim.investor.history)
+    # ax[2].plot(sim.investor.ror_history)
+    # ax[0].legend(['nav'])
+    # ax[1].legend(['invested', 'value'])
+    # ax[2].legend(['Returns'])
+    #
+    # plt.show()
+
+    return investor
 
 print('starting to load data')
-prefix = ''
+prefix = 'xetra_'
 start_date = '1993-01-01'
 end_date = '2017-12-31'
 df_adj_close = load_all_data_from_file(prefix + 'etf_data_adj_close.csv', start_date, end_date)
 
-
-def compute_one_etf(etf):
-    dca = bah.DCA(30, 300.)
-    investor = bah.Investor(etf, np.full(len(etf), 1.0 / len(etf)), dca)
-    sim = bah.BuyAndHoldInvestmentStrategy(investor, 2.)
-    sim.invest(df_adj_close[etf])
-    investor.compute_means()
-
-    _, ax = plt.subplots(3, 1)
-    for rms in investor.rms_list:
-        ax[2].plot(rms)
-
-    for rms in investor.means:
-        print(str(rms))
-
-    ax[0].plot(np.log(df_adj_close[etf]))
-    ax[0].plot(np.log(sim.investor.invested_history))
-    ax[0].plot(np.log(sim.investor.history))
-    # ax[0].plot(sim.investor.history)
-    ax[1].plot(sim.investor.ror_history)
-    ax[0].legend(['nav', 'invested', 'value'])
-    ax[1].legend(['RoR'])
-
-    plt.show()
-
-    return investor
-
-
-etf = ['SPY']
-
-investor = compute_one_etf(etf)
-print('invested:' + str(investor.invested_history[-1]))
-print('value gained:' + str(investor.history[-1]))
-print('ror:' + str(investor.ror_history[-1]))
-print('mean:' + str(investor.m))
-print('std:' + str(investor.std))
+etf = ['DBPG.DE']
 
 data = df_adj_close[etf].values
-ror = np.array(investor.ror_history)
+print(len(data))
+
+
+ror = []
+
+for _ in range(1):
+    df_price = get_data_random_dates(df_adj_close)
+    investor = compute_one_etf(etf, df_price[etf])
+    if investor.invested == 0:
+        continue
+    print('invested:' + str(investor.invested_history[-1]))
+    print('value gained:' + str(investor.history[-1]))
+    print('ror:' + str(investor.ror_history[-1]))
+    ror.append(np.array(investor.ror_history))
 
 data_list = []
 for d in data:
-    if len(d) > 0:
+    if len(d) > 0 and d[0] != 0 and not np.isnan(d[0]):
         data_list.append(d[0])
-    else:
+    elif d > 0 and not np.isnan(d):
         data_list.append(d)
 
 data = np.array(data_list)
@@ -71,6 +94,7 @@ mean_data = data.mean()
 std_data = data.std()
 
 data_s = (data - mean_data) / std_data
+# data_s = data
 data_s2 = data_s ** 2
 data_s3 = data_s ** 3
 data_s4 = data_s ** 4
@@ -78,7 +102,8 @@ data_s4 = data_s ** 4
 print('mean of prices: ' + str(mean_data))
 print('std of prices: ' + str(std_data))
 
-plt.plot(data_s, investor.ror_history, 'C0o')
+for r in ror:
+    plt.plot(data_s, r, 'C0')
 plt.title('nav to returns')
 plt.xlabel('nav')
 plt.ylabel('returns')
@@ -88,18 +113,19 @@ sns.kdeplot(data)
 plt.title('distribution of nav')
 plt.show()
 
-sns.kdeplot(ror)
+for r in ror:
+    sns.kdeplot(r)
 plt.title('distribution of returns')
 plt.show()
 
-df = pd.DataFrame({'data_s': data_s, 'ror': ror})
+df = pd.DataFrame({'data_s': data_s, 'ror': ror[0]})
 print(df.corr().round(2))
 
 with pm.Model() as model:
-    alpha = pm.Normal(name='alpha', mu=np.mean(ror), sd=np.std(ror))
+    alpha = pm.Normal(name='alpha', mu=mean_data, sd=std_data)
     beta = pm.Normal(name='beta', mu=0, sd=10, shape=4)
-    sigma = pm.Uniform(name='sigma', lower=min(ror), upper=max(ror))
-    mu = pm.Deterministic('mu', alpha + beta[0] * data_s + beta[1] * data_s2+beta[2] * data_s3+beta[3] * data_s4)
+    sigma = pm.Uniform(name='sigma', lower=0, upper=std_data)
+    mu = pm.Deterministic('mu', alpha + beta[0] * data_s + beta[1] * data_s2 + beta[2] * data_s3 + beta[3] * data_s4)
     ret = pm.Normal(name='returns', mu=mu, sd=sigma, observed=ror)
     trace_model = pm.sample(1000, tune=2000)
 
@@ -109,19 +135,20 @@ pm.traceplot(trace_model, varnames=['alpha', 'beta', 'sigma'])
 plt.title('model parameters')
 plt.show()
 
-
 mu_pred = trace_model['mu']
 idx = np.argsort(data_s)
 mu_hpd = pm.hpd(mu_pred, alpha=0.11)[idx]
-ret_pred = pm.sample_ppc(trace_model, 200, model)
+ret_pred = pm.sample_ppc(trace_model, 10000, model)
 ret_pred_hpd = pm.hpd(ret_pred['returns'], alpha=0.11)[idx]
 
-plt.plot(ror)
+for r in ror:
+    plt.plot(r)
 plt.plot(ret_pred_hpd)
 plt.show()
 
-
-plt.scatter(data_s, ror, c='C0', alpha=0.3)
+for r in ror:
+    # plt.scatter(data_s, r, c='C0', alpha=0.3)
+    plt.plot(data_s[idx], r, c='C0', alpha=0.3)
 plt.fill_between(data_s[idx], mu_hpd[:, 0], mu_hpd[:, 1], color='C2', alpha=0.25)
 plt.fill_between(data_s[idx], ret_pred_hpd[:, 0], ret_pred_hpd[:, 1], color='C2', alpha=0.25)
 plt.show()
