@@ -5,7 +5,7 @@ import pymc3 as pm
 import sys
 
 sys.path.insert(0, '../etf_data')
-from etf_data_loader import load_all_data_from_file
+from etf_data_loader import load_all_data_from_file2
 from result_loader import load_ranked
 import os
 import pandas as pd
@@ -25,42 +25,42 @@ def get_data_random_dates(df_adj_close, min_year, max_year):
         tmp = rand_start
         rand_start = rand_end
         rand_end = tmp
-    data = df_adj_close[df_adj_close['Date'] > str(rand_start)]
-    data = data[data['Date'] < str(rand_end)]
+    data = df_adj_close[df_adj_close['date'] > str(rand_start)]
+    data = data[data['date'] < str(rand_end)]
 
     return data
+
 
 def clean_data(df_adj_close):
     top = df_adj_close.index.max()
 
     for index in df_adj_close.index:
         if df_adj_close.loc[index, ticket] == 0.:
-            for i in range(index, top+1):
+            for i in range(index, top + 1):
                 if df_adj_close.loc[i, ticket] > 0.:
                     df_adj_close.loc[index, ticket] = df_adj_close.loc[i, ticket]
                     break
     return df_adj_close
 
 
-
 start_date = '1993-01-01'
-end_date = '2018-04-08'
+end_date = '2018-06-15'
 prefix = 'mil_'
 
-df_adj_close = load_all_data_from_file(prefix + 'etf_data_adj_close.csv', start_date, end_date)
+df_adj_close = load_all_data_from_file2(prefix + 'etf_data_adj_close.csv', start_date, end_date)
 
 np.warnings.filterwarnings('ignore')
 
 prefix = 'mil_'
 etf_list = []
-with open('../etf_data/'+prefix+'etfs.txt', 'r') as fd:
+with open('../etf_data/' + prefix + 'etfs.txt', 'r') as fd:
     etf_list = list(fd.read().splitlines())
 
 etf_list = list(set(etf_list))
 
 MAX_ITER = 1000
 
-result_csv = 'evaluation_results/'+prefix+'evaluation_result.csv'
+result_csv = 'evaluation_results/' + prefix + 'evaluation_result_2.csv'
 if os.path.isfile(result_csv):
     result_df = pd.read_csv(result_csv)
 else:
@@ -77,23 +77,23 @@ for ticket in etf_list:
     print(ticket)
 
     try:
-        df_ticket_data = df_adj_close[['Date', ticket]]
+        df_ticket_data = df_adj_close[['date', ticket]]
     except:
-        print('failed to find ticket: '+ticket)
+        print('failed to find ticket: ' + ticket)
         continue
     df_ticket_data = df_ticket_data[df_ticket_data[ticket] > 0.]
     df_ticket_data = df_ticket_data.reindex()
 
-    date_data = df_ticket_data.Date
+    date_data = df_ticket_data.date
     try:
         min_year = datetime.strptime(date_data.min(), '%Y-%M-%d').year
     except:
-        print(ticket+' has no date data!')
+        print(ticket + ' has no date data!')
         continue
 
     max_year = datetime.strptime(date_data.max(), '%Y-%M-%d').year
     if min_year >= max_year:
-        print('%s not processed because of min_year >= max_year'%(ticket))
+        print('%s not processed because of min_year >= max_year' % (ticket))
         continue
 
     returns = np.empty((MAX_ITER,))
@@ -115,7 +115,7 @@ for ticket in etf_list:
         i += 1
 
     if failed > MAX_ITER:
-        print('%s cant be computed!'%ticket)
+        print('%s cant be computed!' % ticket)
         continue
 
     hpd_sim = pm.hpd(returns, alpha=0.11)
