@@ -36,18 +36,21 @@ template_start = '''<html>
     <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css"
           integrity="sha384-nn4HPE8lTHyVtfCBi5yW9d20FjT8BJwUXyWZT9InLYax14RDjBj46LmSztkmNP9w" crossorigin="anonymous">
     <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/grids-responsive-min.css">
-    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css">
 </head>
 <body>
 
 <div class="banner"> 
     <h1 class="banner-head"> ETF EU (Borsa-Italia)rankings</h1> 
     <pre>(Without warranty of any kind. Please use your own judgement...)</pre>     
+    <p>
+    ...By evaluating B&H simulations of Borsa Italia listed ETFs on random interval date data, I gathered
+    data about possible RoR(rate of returns). Then I used these results in a probabilistic model and simulated
+    and sampled given results by MCMC method...
+    </p>
 </div> 
 
 <div id="layout" class="pure-g">
-    <div class="sidebar pure-u-1 pure-u-md-1-4"></div>
-    <div class="content pure-u-1 pure-u-md-3-4">
+    <div class="content pure-u-1 pure-u-md-1-2">
             <h2 class="post-title">Top 10 ETFs by ranking</h2>
             <pre> (Should be low risk investments...)</pre>
             <div>
@@ -56,8 +59,7 @@ template_start = '''<html>
 template_mid = '''
             </div>
     </div>
-    <div class="sidebar pure-u-1 pure-u-md-1-4"></div>
-    <div class="content pure-u-1 pure-u-md-3-4">
+    <div class="content pure-u-1 pure-u-md-1-2">
             <h2 class="post-title">Top 10 ETFs by upper RoR</h2>
             <pre> (Should be high risk and high reward investments...)</pre>
             <div>            
