@@ -6,7 +6,6 @@ import sys
 
 sys.path.insert(0, '../etf_data')
 from etf_data_loader import load_all_data_from_file2
-from result_loader import load_ranked
 import os
 import pandas as pd
 

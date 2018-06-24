@@ -7,7 +7,7 @@ import pandas as pd
 from simple_buy_and_hold_sim import BuyAndHoldInvestmentStrategy, SimpleBuyAndHoldMultiple
 
 sys.path.insert(0, '../etf_data')
-from etf_data_loader import load_all_data_from_file
+from etf_data_loader import load_all_data_from_file2
 
 # tickets = ['6AQQ.DE',
 #            'SPY1.DE',
@@ -34,7 +34,7 @@ tickets = ['ANX.MI',
            'SPY5.MI'
            ]
 start_date = '2010-01-01'
-end_date = '2018-04-08'
+end_date = '2018-06-15'
 
 prefix = 'mil_'
 
@@ -67,7 +67,7 @@ def clean_data(df_adj_close, tickets):
     return df_adj_close
 
 
-df_adj_close = load_all_data_from_file(prefix + 'etf_data_adj_close.csv', start_date, end_date)
+df_adj_close = load_all_data_from_file2(prefix + 'etf_data_adj_close.csv', start_date, end_date)
 # df_adj_close2 = load_all_data_from_file('lse_etf_data_adj_close.csv', start_date, end_date)
 
 # etf_1 = []
