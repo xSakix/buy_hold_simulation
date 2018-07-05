@@ -161,5 +161,5 @@ if __name__ == '__main__':
     import datetime
 
     outputfile = str(datetime.date.today()).replace('-', '_') + '_mil_evaluation_result'
-    # transform_to_html(outfile=outputfile)
+    transform_to_html(outfile=outputfile)
     generate_index()
