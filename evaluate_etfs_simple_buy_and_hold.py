@@ -43,7 +43,7 @@ def clean_data(df_adj_close):
 
 
 start_date = '1993-01-01'
-end_date = '2018-06-15'
+end_date = '2018-07-04'
 prefix = 'mil_'
 
 df_adj_close = load_all_data_from_file2(prefix + 'etf_data_adj_close.csv', start_date, end_date)
@@ -59,7 +59,7 @@ etf_list = list(set(etf_list))
 
 MAX_ITER = 1000
 
-result_csv = 'evaluation_results/' + prefix + 'evaluation_result_2.csv'
+result_csv = 'evaluation_results/' + prefix + 'evaluation_result_3.csv'
 if os.path.isfile(result_csv):
     result_df = pd.read_csv(result_csv)
 else:

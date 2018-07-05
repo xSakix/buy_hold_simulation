@@ -44,7 +44,7 @@ def clean_data(df_adj_close):
 
 
 start_date = '1993-01-01'
-end_date = '2018-04-08'
+end_date = '2018-07-04'
 prefix = 'mil_'
 
 df_adj_close = load_all_data_from_file(prefix + 'etf_data_adj_close.csv', start_date, end_date)
